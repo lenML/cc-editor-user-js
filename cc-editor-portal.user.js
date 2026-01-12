@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         CCEditor Launcher
 // @namespace    https://lenml.github.io/CCEditor
-// @version      0.1.0
+// @version      0.1.1
 // @description  Add CCEditor jump button to character sites
 // @author       lenML
-// @match        https://chub.ai/characters/*
+// @match        https://chub.ai/*
 // @grant        none
 // @license         MIT
 // @supportURL      https://github.com/lenML/cc-editor-user-js/issues
@@ -107,7 +107,7 @@
       this.initialized = false;
     }
 
-    init() {
+    fire() {
       this.adapter = this.adapters.find((a) => a.match());
       if (!this.adapter) return;
 
@@ -377,8 +377,33 @@
     // new OtherSiteAdapter(),
   ]);
 
-  const onLoad = new DynamicContentLoader();
-  onLoad.start(() => {
-    launcher.init();
-  });
+  const url_patterns = [/chub\.ai\/characters\/[\w_-]+\/[\w_-]+/i];
+  const is_matched = () =>
+    url_patterns.some((pattern) => pattern.test(window.location.href));
+
+  const fireOnce = () => {
+    if (!is_matched()) return;
+    const onLoad = new DynamicContentLoader();
+    onLoad.start(() => {
+      launcher.fire();
+    });
+  };
+
+  const _historyWrap = function (type) {
+    const orig = history[type];
+    const e = new Event(type);
+    return function () {
+      const rv = orig.apply(this, arguments);
+      e.arguments = arguments;
+      window.dispatchEvent(e);
+      return rv;
+    };
+  };
+  history.pushState = _historyWrap("pushState");
+  history.replaceState = _historyWrap("replaceState");
+  window.addEventListener("popstate", fireOnce);
+  window.addEventListener("pushState", fireOnce);
+  window.addEventListener("replaceState", fireOnce);
+  window.addEventListener("hashchange", fireOnce);
+  fireOnce();
 })();
