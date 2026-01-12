@@ -6,6 +6,8 @@
 // @author       lenML
 // @match        https://chub.ai/characters/*
 // @grant        none
+// @license         MIT
+// @supportURL      https://github.com/lenML/cc-editor-user-js/issues
 // ==/UserScript==
 
 (() => {
