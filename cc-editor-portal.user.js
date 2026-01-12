@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CCEditor Launcher
 // @namespace    https://lenml.github.io/CCEditor
-// @version      0.1.1
+// @version      0.1.2
 // @description  Add CCEditor jump button to character sites
 // @author       lenML
 // @match        https://chub.ai/*
@@ -104,7 +104,10 @@
     constructor(adapters) {
       this.adapters = adapters;
       this.adapter = null;
-      this.initialized = false;
+    }
+
+    get injected() {
+      return !!document.body.querySelector(`.${CONFIG.injectClass}`);
     }
 
     fire() {
@@ -112,24 +115,34 @@
       if (!this.adapter) return;
 
       this.waitForDom(() => {
-        if (this.initialized) return;
+        if (this.injected) return false;
         const target = this.adapter.getInsertTarget();
         const imgUrl = this.adapter.getCardImageUrl();
 
-        if (!target || !imgUrl) return;
+        if (!target || !imgUrl) return false;
 
         this.injectButton(target, imgUrl);
-        this.initialized = true;
+        return true;
       });
     }
 
     waitForDom(cb) {
-      const observer = new MutationObserver(() => cb());
+      let is_done = false;
+      const cbs = [() => (is_done = true)];
+      const done = () => cbs.forEach((cb) => cb());
+      const run_cb = () => {
+        if (is_done) return;
+        if (cb()) return done;
+      };
+      const timer = setInterval(run_cb, 500);
+      cbs.push(() => clearInterval(timer));
+      const observer = new MutationObserver(run_cb);
+      cbs.push(() => observer.disconnect());
       observer.observe(document.body, {
         childList: true,
         subtree: true,
       });
-      cb();
+      run_cb();
     }
 
     injectButton(target, imgUrl) {
@@ -233,7 +246,7 @@
       // 初始化静默期定时器
       this.resetQuietTimer();
 
-      console.log("DynamicContentLoader started");
+      // console.log("DynamicContentLoader started");
     }
 
     /**
@@ -381,7 +394,9 @@
   const is_matched = () =>
     url_patterns.some((pattern) => pattern.test(window.location.href));
 
-  const fireOnce = () => {
+  const fireOnce = async () => {
+    // next tick
+    await new Promise((resolve) => setTimeout(resolve));
     if (!is_matched()) return;
     const onLoad = new DynamicContentLoader();
     onLoad.start(() => {
