@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CCEditor Launcher
 // @namespace    https://lenml.github.io/CCEditor
-// @version      0.1.2
+// @version      0.1.3
 // @description  Add CCEditor jump button to character sites
 // @author       lenML
 // @match        https://chub.ai/*
@@ -49,17 +49,28 @@
    * Abstract Site Adapter
    *********************************/
   class SiteAdapter {
-    /** 是否匹配当前站点 */
+    /**
+     * 是否匹配当前站点
+     * @returns {boolean}
+     */
     match() {
       throw new Error("match() not implemented");
     }
 
-    /** 从页面中解析 character card png url */
+    /**
+     * 从页面中解析 character card png url
+     *
+     * @returns {string | null}
+     */
     getCardImageUrl() {
       throw new Error("getCardImageUrl() not implemented");
     }
 
-    /** 返回按钮插入的 DOM 节点 */
+    /**
+     * 返回按钮插入的 DOM 节点
+     *
+     * @returns {Element | null}
+     */
     getInsertTarget() {
       throw new Error("getInsertTarget() not implemented");
     }
@@ -69,7 +80,7 @@
    * Chub.ai Adapter
    *********************************/
   class ChubAdapter extends SiteAdapter {
-    pattern = /\/characters\/([\w_\-]+)\/([\w_\-]+)/g;
+    pattern = /\/characters\/([\w_\-]+)\/([\w_\-]+)/i;
 
     match() {
       return (
@@ -102,8 +113,10 @@
    *********************************/
   class CCEditorLauncher {
     constructor(adapters) {
+      /**
+       * @type {SiteAdapter[]}
+       */
       this.adapters = adapters;
-      this.adapter = null;
     }
 
     get injected() {
@@ -111,13 +124,12 @@
     }
 
     fire() {
-      this.adapter = this.adapters.find((a) => a.match());
-      if (!this.adapter) return;
-
       this.waitForDom(() => {
-        if (this.injected) return false;
-        const target = this.adapter.getInsertTarget();
-        const imgUrl = this.adapter.getCardImageUrl();
+        if (this.injected) return true;
+        const adapter = this.adapters.find((a) => a.match());
+        if (!adapter) return true; // 直接结束，因为匹配不上
+        const target = adapter.getInsertTarget();
+        const imgUrl = adapter.getCardImageUrl();
 
         if (!target || !imgUrl) return false;
 
@@ -390,9 +402,7 @@
     // new OtherSiteAdapter(),
   ]);
 
-  const url_patterns = [/chub\.ai\/characters\/[\w_-]+\/[\w_-]+/i];
-  const is_matched = () =>
-    url_patterns.some((pattern) => pattern.test(window.location.href));
+  const is_matched = () => launcher.adapters.some((a) => a.match());
 
   const fireOnce = async () => {
     // next tick
