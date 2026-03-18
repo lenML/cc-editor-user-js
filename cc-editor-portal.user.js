@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         CCEditor Launcher
 // @namespace    https://lenml.github.io/CCEditor
-// @version      0.1.3
+// @version      0.1.4
 // @description  Add CCEditor jump button to character sites
 // @author       lenML
 // @match        https://chub.ai/*
+// @match        https://www.characterhub.org/*
 // @grant        none
 // @license         MIT
 // @supportURL      https://github.com/lenML/cc-editor-user-js/issues
@@ -105,6 +106,32 @@
      */
     getInsertTarget() {
       return document.querySelector("main h3")?.parentElement || null;
+    }
+  }
+
+  class CharacterhubAdapter extends SiteAdapter {
+    pattern = /\/characters\/([\w_\-]+)\/([\w_\-]+)/i;
+
+    match() {
+      return (
+        location.hostname === "www.characterhub.org" &&
+        this.pattern.test(location.pathname)
+      );
+    }
+
+    getCardImageUrl() {
+      const [, uid, cid] = this.pattern.exec(location.pathname) || [];
+      if (uid && cid) {
+        return `https://avatars.charhub.io/avatars/${uid}/${cid}/chara_card_v2.png`;
+      }
+      return null;
+    }
+
+    /**
+     * 插到角色标题附近
+     */
+    getInsertTarget() {
+      return document.querySelector(".chub-card-info a")?.parentElement || null;
     }
   }
 
@@ -399,6 +426,7 @@
    *********************************/
   const launcher = new CCEditorLauncher([
     new ChubAdapter(),
+    new CharacterhubAdapter(),
     // new OtherSiteAdapter(),
   ]);
 
